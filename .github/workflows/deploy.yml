@@ -1,0 +1,20 @@
+name: Deploy React App
+
+on:
+  push:
+    branches:
+      - main   # Autodeploy on push to main
+
+jobs:
+  deploy:
+    runs-on: self-hosted  # your self-hosted runner on the server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and redeploy with Docker Compose
+        run: |
+          docker compose down
+          docker compose build --no-cache
+          docker compose up -d
