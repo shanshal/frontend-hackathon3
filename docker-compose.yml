@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  react-app:
+    build: .
+    container_name: hackathon-frontend
+    ports:
+      - "84:3000"   # host:container
+    restart: unless-stopped
