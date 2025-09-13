@@ -1,75 +1,58 @@
 import { useState, useEffect } from 'react';
 
+const BASE_URL = "http://api.yousified.xyz";
+
+async function registerUser(file, username) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("username", username);
+  const res = await fetch(`${BASE_URL}/register`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error("Register failed");
+  return await res.json();
+}
+
+async function matchFile(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${BASE_URL}/match`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error("Match failed");
+  return await res.json();
+}
+
+async function registerFolder(folderPath, username) {
+  const res = await fetch(`${BASE_URL}/register-folder`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folderPath, username }),
+  });
+  if (!res.ok) throw new Error("Register folder failed");
+  return await res.json();
+}
+
 function App() {
-  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'dashboard', 'database', 'fingerprint', 'game'
+  const [currentPage, setCurrentPage] = useState('home');
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Dummy data for development
   const dummyPlayers = [
-    {
-      playerId: "player1",
-      name: "Alice Detective",
-      found: 4,
-      total: 4,
-      isSolved: true,
-      lastUpdate: new Date(Date.now() - 5 * 60 * 1000).toISOString() // 5 minutes ago
-    },
-    {
-      playerId: "player2", 
-      name: "Bob Investigator",
-      found: 3,
-      total: 4,
-      isSolved: false,
-      lastUpdate: new Date(Date.now() - 2 * 60 * 1000).toISOString() // 2 minutes ago
-    },
-    {
-      playerId: "player3",
-      name: "Charlie Forensic",
-      found: 2,
-      total: 4,
-      isSolved: false,
-      lastUpdate: new Date(Date.now() - 1 * 60 * 1000).toISOString() // 1 minute ago
-    },
-    {
-      playerId: "player4",
-      name: "Diana Sleuth",
-      found: 1,
-      total: 4,
-      isSolved: false,
-      lastUpdate: new Date(Date.now() - 30 * 1000).toISOString() // 30 seconds ago
-    },
-    {
-      playerId: "player5",
-      name: "Eve Analyzer",
-      found: 0,
-      total: 4,
-      isSolved: false,
-      lastUpdate: new Date(Date.now() - 10 * 1000).toISOString() // 10 seconds ago
-    }
+    { playerId: "player1", name: "Alice Detective", found: 4, total: 4, isSolved: true, lastUpdate: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+    { playerId: "player2", name: "Bob Investigator", found: 3, total: 4, isSolved: false, lastUpdate: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
+    { playerId: "player3", name: "Charlie Forensic", found: 2, total: 4, isSolved: false, lastUpdate: new Date(Date.now() - 1 * 60 * 1000).toISOString() },
+    { playerId: "player4", name: "Diana Sleuth", found: 1, total: 4, isSolved: false, lastUpdate: new Date(Date.now() - 30 * 1000).toISOString() },
+    { playerId: "player5", name: "Eve Analyzer", found: 0, total: 4, isSolved: false, lastUpdate: new Date(Date.now() - 10 * 1000).toISOString() }
   ];
 
   const fetchLeaderboard = async () => {
     try {
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Simulate some progress changes over time
       const updatedPlayers = dummyPlayers.map(player => {
-        // Randomly update some players' progress occasionally
         if (Math.random() < 0.1 && !player.isSolved) {
           const newFound = Math.min(player.found + (Math.random() < 0.5 ? 1 : 0), player.total);
-          return {
-            ...player,
-            found: newFound,
-            isSolved: newFound === player.total,
-            lastUpdate: new Date().toISOString()
-          };
+          return { ...player, found: newFound, isSolved: newFound === player.total, lastUpdate: new Date().toISOString() };
         }
         return player;
       });
-      
       setPlayers(updatedPlayers);
       setError(null);
     } catch (err) {
@@ -79,24 +62,13 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    // Initial fetch only
-    fetchLeaderboard();
-  }, []);
+  useEffect(() => { fetchLeaderboard(); }, []);
 
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+  const formatTime = (timestamp) =>
+      new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  const getProgressPercentage = (found, total) => {
-    return total > 0 ? (found / total) * 100 : 0;
-  };
+  const getProgressPercentage = (found, total) => (total > 0 ? (found / total) * 100 : 0);
 
-  // Navigation Component
   const Navigation = () => {
     const navItems = [
       { id: 'home', label: '🏠 Home', icon: '🏠' },
@@ -105,685 +77,521 @@ function App() {
       { id: 'fingerprint', label: '🖐️ Fingerprint Scanner', icon: '🖐️' },
       { id: 'game', label: '🎮 Mini Game', icon: '🎮' }
     ];
-
     return (
-      <nav className="border-b border-gray-200 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-800">
-                🔬 Forensic Investigation Platform
-              </h1>
-            </div>
-            <div className="flex space-x-1">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentPage(item.id)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    currentPage === item.id
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  {item.icon} {item.label.split(' ').slice(1).join(' ')}
-                </button>
-              ))}
+        <nav className="border-b border-gray-200 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="flex items-center justify-between h-16">
+              <h1 className="text-xl font-bold text-gray-800">🔬 Forensic Investigation Platform</h1>
+              <div className="flex space-x-1">
+                {navItems.map((item) => (
+                    <button key={item.id} onClick={() => setCurrentPage(item.id)}
+                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === item.id ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
+                      {item.icon} {item.label.split(' ').slice(1).join(' ')}
+                    </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
     );
   };
 
-  // Home Page Component
-  const HomePage = () => {
-    return (
-      <div className="min-h-screen bg-white">
+  const HomePage = () => (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <Navigation />
-        <main className="max-w-6xl mx-auto px-6 py-12">
-          <div className="text-center mb-12">
-            <div className="text-8xl mb-6">🔬</div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-4">
+        <main className="max-w-6xl mx-auto px-6 py-16">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-8 shadow-lg">
+              <div className="text-6xl">🔬</div>
+            </div>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
               Forensic Investigation Platform
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               Advanced digital forensic tools for crime scene analysis, evidence processing, and investigative workflows
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div 
-              onClick={() => setCurrentPage('dashboard')}
-              className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-            >
-              <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Dashboard</h3>
-              <p className="text-sm text-gray-600">View investigation statistics and case progress</p>
-            </div>
-
-            <div 
-              onClick={() => setCurrentPage('database')}
-              className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-            >
-              <div className="text-4xl mb-4">🗃️</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Database Search</h3>
-              <p className="text-sm text-gray-600">Search criminal records and evidence database</p>
-            </div>
-
-            <div 
-              onClick={() => setCurrentPage('fingerprint')}
-              className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-            >
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
               <div className="text-4xl mb-4">🖐️</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Fingerprint Scanner</h3>
-              <p className="text-sm text-gray-600">Analyze and match fingerprint evidence</p>
-            </div>
-
-            <div 
-              onClick={() => setCurrentPage('game')}
-              className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-            >
-              <div className="text-4xl mb-4">🎮</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Training Game</h3>
-              <p className="text-sm text-gray-600">Practice forensic skills with interactive challenges</p>
-            </div>
-          </div>
-
-          <div className="mt-12 bg-gray-50 rounded-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Recent Activity</h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600">Fingerprint match found for Case #2024-001</span>
-                <span className="text-sm text-gray-500">2 minutes ago</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-600">DNA analysis completed for Evidence #E-4429</span>
-                <span className="text-sm text-gray-500">15 minutes ago</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-gray-600">New case assigned: Burglary Investigation</span>
-                <span className="text-sm text-gray-500">1 hour ago</span>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  };
-
-  // Dashboard Page Component (Coming Soon)
-  const DashboardPage = () => {
-    return (
-      <div className="min-h-screen bg-white relative">
-        <Navigation />
-        
-        {/* Coming Soon Ribbon */}
-        <div className="absolute top-16 right-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-2 transform rotate-12 translate-x-4 translate-y-4 z-20 shadow-lg">
-          <span className="font-bold text-sm">🚧 COMING SOON</span>
-        </div>
-
-        {/* Blurred Content */}
-        <div className="filter blur-sm pointer-events-none">
-          <main className="max-w-6xl mx-auto px-6 py-8">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">Investigation Dashboard</h1>
-              <p className="text-gray-600">Overview of active cases and forensic analysis</p>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Active Cases</p>
-                    <p className="text-2xl font-bold text-gray-800">12</p>
-                  </div>
-                  <div className="text-3xl">📁</div>
-                </div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Evidence Processed</p>
-                    <p className="text-2xl font-bold text-gray-800">247</p>
-                  </div>
-                  <div className="text-3xl">🔍</div>
-                </div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Matches Found</p>
-                    <p className="text-2xl font-bold text-gray-800">89</p>
-                  </div>
-                  <div className="text-3xl">✅</div>
-                </div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Cases Solved</p>
-                    <p className="text-2xl font-bold text-gray-800">34</p>
-                  </div>
-                  <div className="text-3xl">🏆</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Active Cases */}
-            <div className="grid lg:grid-cols-2 gap-8">
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Active Cases</h2>
-                <div className="space-y-4">
-                  <div className="border-l-4 border-red-500 pl-4">
-                    <h3 className="font-medium text-gray-800">Case #2024-001: Burglary Investigation</h3>
-                    <p className="text-sm text-gray-600">Status: Evidence Analysis</p>
-                    <p className="text-sm text-gray-500">Priority: High</p>
-                  </div>
-                  <div className="border-l-4 border-yellow-500 pl-4">
-                    <h3 className="font-medium text-gray-800">Case #2024-002: Identity Fraud</h3>
-                    <p className="text-sm text-gray-600">Status: Fingerprint Matching</p>
-                    <p className="text-sm text-gray-500">Priority: Medium</p>
-                  </div>
-                  <div className="border-l-4 border-green-500 pl-4">
-                    <h3 className="font-medium text-gray-800">Case #2024-003: Vehicle Theft</h3>
-                    <p className="text-sm text-gray-600">Status: DNA Processing</p>
-                    <p className="text-sm text-gray-500">Priority: Low</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Matches</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl">🖐️</div>
-                    <div>
-                      <p className="font-medium text-gray-800">Fingerprint Match</p>
-                      <p className="text-sm text-gray-600">John Smith - 94.7% confidence</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl">🧬</div>
-                    <div>
-                      <p className="font-medium text-gray-800">DNA Match</p>
-                      <p className="text-sm text-gray-600">Sarah Johnson - 99.2% confidence</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-purple-50 rounded-lg">
-                    <div className="text-2xl">📸</div>
-                    <div>
-                      <p className="font-medium text-gray-800">Facial Recognition</p>
-                      <p className="text-sm text-gray-600">Michael Davis - 87.3% confidence</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </main>
-        </div>
-
-        {/* Coming Soon Overlay Content */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center bg-white/90 backdrop-blur-sm rounded-lg p-8 shadow-lg border border-gray-200 max-w-md mx-4">
-            <div className="text-6xl mb-4">🚧</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Dashboard Coming Soon</h2>
-            <p className="text-gray-600 mb-4">
-              We're working hard to bring you comprehensive case management and analytics tools.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Database Search Page Component
-  const DatabasePage = () => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [searching, setSearching] = useState(false);
-
-    const dummyResults = [
-      {
-        id: 1,
-        name: "John Smith",
-        type: "Criminal Record",
-        confidence: 94.7,
-        details: "Previous convictions: Burglary (2019), Theft (2021)",
-        image: "https://via.placeholder.com/100x100/2563eb/ffffff?text=JS"
-      },
-      {
-        id: 2,
-        name: "Sarah Johnson",
-        type: "Witness",
-        confidence: 87.3,
-        details: "Witness in Case #2023-445, Reliable testimony record",
-        image: "https://via.placeholder.com/100x100/16a34a/ffffff?text=SJ"
-      },
-      {
-        id: 3,
-        name: "Michael Davis",
-        type: "Person of Interest",
-        confidence: 76.8,
-        details: "Connected to multiple cases, No convictions",
-        image: "https://via.placeholder.com/100x100/dc2626/ffffff?text=MD"
-      }
-    ];
-
-    const handleSearch = async () => {
-      if (!searchQuery.trim()) return;
-      
-      setSearching(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSearchResults(dummyResults);
-      setSearching(false);
-    };
-
-    return (
-      <div className="min-h-screen bg-white">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Database Search</h1>
-            <p className="text-gray-600">Search criminal records, evidence, and case files</p>
-          </div>
-
-          {/* Search Interface */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Enter name, case number, or evidence ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-              </div>
-              <button
-                onClick={handleSearch}
-                disabled={searching}
-                className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Fingerprint Analysis</h3>
+              <p className="text-gray-600 mb-4">Advanced biometric matching and identification system</p>
+              <button 
+                onClick={() => setCurrentPage('fingerprint')}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
               >
-                {searching ? '⏳ Searching...' : '🔍 Search'}
+                Start Scanning
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+              <div className="text-4xl mb-4">🗃️</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Database Search</h3>
+              <p className="text-gray-600 mb-4">Search through forensic databases and case files</p>
+              <button 
+                onClick={() => setCurrentPage('database')}
+                className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                Search Database
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+              <div className="text-4xl mb-4">🎮</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Training Game</h3>
+              <p className="text-gray-600 mb-4">Interactive forensic training and skill development</p>
+              <button 
+                onClick={() => setCurrentPage('game')}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                Play Game
               </button>
             </div>
           </div>
 
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                Search Results ({searchResults.length})
-              </h2>
-              <div className="space-y-4">
-                {searchResults.map((result) => (
-                  <div key={result.id} className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                    <img
-                      src={result.image}
-                      alt={result.name}
-                      className="w-16 h-16 rounded-lg object-cover"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-gray-800">{result.name}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          result.confidence >= 90 ? 'bg-green-100 text-green-800' :
-                          result.confidence >= 75 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {result.confidence}% Match
-                        </span>
-                      </div>
-                      <p className="text-sm text-blue-600 mb-1">{result.type}</p>
-                      <p className="text-sm text-gray-600">{result.details}</p>
-                    </div>
-                    <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm transition-colors">
-                      View Details
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {searchResults.length === 0 && searchQuery && !searching && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <p className="text-gray-600">No results found for "{searchQuery}"</p>
-            </div>
-          )}
-        </main>
-      </div>
-    );
-  };
-
-  // Game Page Component (moved from leaderboard)
-  const GamePage = () => {
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-white">
-          <Navigation />
-          <div className="flex items-center justify-center" style={{height: 'calc(100vh - 64px)'}}>
-            <div className="text-center">
-              <div className="text-6xl mb-4">⏳</div>
-              <p className="text-gray-600">Loading...</p>
+          <div className="mt-16 text-center">
+            <div className="inline-flex items-center space-x-2 bg-white rounded-full px-6 py-3 shadow-md">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-gray-600">System Online - All APIs Connected</span>
             </div>
           </div>
-        </div>
-      );
-    }
+        </main>
+      </div>
+  );
 
-    if (error) {
-      return (
-        <div className="min-h-screen bg-white">
-          <Navigation />
-          <div className="flex items-center justify-center" style={{height: 'calc(100vh - 64px)'}}>
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">❌</span>
-                <div>
-                  <h3 className="text-red-800 font-medium">Error</h3>
-                  <p className="text-red-600 text-sm">{error}</p>
+  const DashboardPage = () => (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+        <Navigation />
+        <main className="max-w-6xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">Investigation Dashboard</h1>
+              <p className="text-gray-600">Overview of active cases and forensic analysis</p>
+            </div>
+            <div className="bg-orange-100 border border-orange-200 text-orange-800 px-4 py-2 rounded-lg">
+              🚧 Coming Soon
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Active Cases</h3>
+                <div className="text-2xl">📋</div>
+              </div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">12</div>
+              <p className="text-gray-600 text-sm">Cases under investigation</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Evidence Items</h3>
+                <div className="text-2xl">🔍</div>
+              </div>
+              <div className="text-3xl font-bold text-green-600 mb-2">247</div>
+              <p className="text-gray-600 text-sm">Items processed this month</p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Match Rate</h3>
+                <div className="text-2xl">📊</div>
+              </div>
+              <div className="text-3xl font-bold text-purple-600 mb-2">94%</div>
+              <p className="text-gray-600 text-sm">Successful identifications</p>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800">Recent Activity</h3>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-gray-600">Fingerprint match found for Case #2024-001</span>
+                  <span className="text-sm text-gray-400">2 min ago</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-gray-600">New evidence uploaded to Case #2024-003</span>
+                  <span className="text-sm text-gray-400">15 min ago</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span className="text-gray-600">Database search completed for John Doe</span>
+                  <span className="text-sm text-gray-400">1 hour ago</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      );
+        </main>
+      </div>
+  );
+
+  const GamePage = () => {
+    if (loading) {
+      return <div className="min-h-screen bg-white"><Navigation /><div className="flex items-center justify-center h-[80vh]"><p>⏳ Loading...</p></div></div>;
     }
-
     return (
-      <div className="min-h-screen bg-white">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">🎮 Forensic Training Game</h1>
-            <p className="text-gray-600">Competitive forensic skill challenges and leaderboard</p>
-          </div>
-
-          {players.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🙁</div>
-              <p className="text-gray-600">No players yet</p>
-            </div>
-          ) : (
+        <div className="min-h-screen bg-white">
+          <Navigation />
+          <main className="max-w-6xl mx-auto px-6 py-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">🎮 Forensic Training Game</h1>
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <table className="w-full">
                 <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      #
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Player
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Progress
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Last Update
-                    </th>
-                  </tr>
+                <tr>
+                  <th className="px-3 py-3 text-left">#</th>
+                  <th className="px-3 py-3 text-left">Player</th>
+                  <th className="px-3 py-3 text-left">Progress</th>
+                  <th className="px-3 py-3 text-left">Status</th>
+                  <th className="px-3 py-3 text-left">Last Update</th>
+                </tr>
                 </thead>
                 <tbody>
-                  {players
-                    .sort((a, b) => (b.found / b.total) - (a.found / a.total))
-                    .map((player, index) => (
-                      <tr key={player.playerId} className="border-t border-gray-200 hover:bg-gray-50">
-                        <td className="px-3 py-2 text-gray-500 text-sm">
-                          {index + 1}
-                        </td>
-                        <td className="px-3 py-2 font-medium text-gray-800">
-                          {player.name}
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-32 bg-gray-200 rounded">
-                              <div 
-                                className="h-2 bg-blue-500 rounded" 
-                                style={{ width: `${getProgressPercentage(player.found, player.total)}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-sm text-gray-600">
-                              {player.found}/{player.total}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          {player.isSolved ? (
-                            <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
-                              ✅ Solved
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
-                              ⏳ Solving
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500">
-                          {formatTime(player.lastUpdate)}
-                        </td>
-                      </tr>
-                    ))}
+                {players.sort((a, b) => (b.found / b.total) - (a.found / a.total)).map((player, i) => (
+                    <tr key={player.playerId} className="border-t hover:bg-gray-50">
+                      <td className="px-3 py-2">{i + 1}</td>
+                      <td className="px-3 py-2">{player.name}</td>
+                      <td className="px-3 py-2">{player.found}/{player.total}</td>
+                      <td className="px-3 py-2">{player.isSolved ? "✅ Solved" : "⏳ Solving"}</td>
+                      <td className="px-3 py-2">{formatTime(player.lastUpdate)}</td>
+                    </tr>
+                ))}
                 </tbody>
               </table>
             </div>
-          )}
-        </main>
-      </div>
+          </main>
+        </div>
     );
   };
 
-  // Fingerprint Scanner Component
   const FingerprintPage = () => {
-    const [scanState, setScanState] = useState('ready'); // 'ready', 'scanning', 'results'
+    const [scanState, setScanState] = useState('ready');
+    const [file, setFile] = useState(null);
     const [matches, setMatches] = useState([]);
-    const [expandedImage, setExpandedImage] = useState(null);
     const [scanLoading, setScanLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [registerMode, setRegisterMode] = useState(false);
+    const [username, setUsername] = useState('');
 
-    // Dummy fingerprint match data
-    const dummyMatches = [
-      {
-        id: 1,
-        personName: "John Smith",
-        image: "https://via.placeholder.com/200x200/2563eb/ffffff?text=Print+1"
-      },
-      {
-        id: 2,
-        personName: "Sarah Johnson", 
-        image: "https://via.placeholder.com/200x200/16a34a/ffffff?text=Print+2"
-      },
-      {
-        id: 3,
-        personName: "Michael Davis",
-        image: "https://via.placeholder.com/200x200/dc2626/ffffff?text=Print+3"
-      },
-      {
-        id: 4,
-        personName: "Emily Wilson",
-        image: "https://via.placeholder.com/200x200/f59e0b/ffffff?text=Print+4"
-      }
-    ];
-
-    const startScan = async () => {
-      setScanState('scanning');
-      setScanLoading(true);
-      
-      // Simulate scanning process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Just use the dummy matches as-is
-      const sortedMatches = [...dummyMatches];
-      setMatches(sortedMatches);
-      setScanState('results');
-      setScanLoading(false);
+    const handleFileChange = (e) => {
+      setFile(e.target.files[0]);
+      setError(null);
     };
 
-    const finishScan = () => {
-      setScanState('ready');
-      setMatches([]);
-      setExpandedImage(null);
+    const startScan = async () => {
+      if (!file) {
+        setError("Please select a file first");
+        return;
+      }
+      
+      setScanState("scanning");
+      setScanLoading(true);
+      setError(null);
+      
+      try {
+        const matchResult = await matchFile(file);
+        setMatches([matchResult]);
+        setScanState("results");
+      } catch (err) {
+        console.error('Match error:', err);
+        setError(`Scan failed: ${err.message}`);
+        setScanState("ready");
+      } finally {
+        setScanLoading(false);
+      }
+    };
+
+    const registerFingerprint = async () => {
+      if (!file || !username.trim()) {
+        setError("Please select a file and enter a username");
+        return;
+      }
+      
+      setScanLoading(true);
+      setError(null);
+      
+      try {
+        const result = await registerUser(file, username.trim());
+        alert(`Registration successful! User: ${username}`);
+        setFile(null);
+        setUsername('');
+        setRegisterMode(false);
+      } catch (err) {
+        console.error('Registration error:', err);
+        setError(`Registration failed: ${err.message}`);
+      } finally {
+        setScanLoading(false);
+      }
     };
 
     if (scanState === 'ready') {
       return (
-        <div className="min-h-screen bg-white">
-          <Navigation />
-          <div className="flex items-center justify-center" style={{height: 'calc(100vh - 64px)'}}>
-            <div className="text-center max-w-md">
-              <div className="text-8xl mb-6">🔍</div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-4">
-                Fingerprint Scanner
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Place your finger on the scanner to begin analysis
-              </p>
-              <button
-                onClick={startScan}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-lg text-xl transition-colors"
-              >
-                🖐️ Start Scan
-              </button>
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+            <Navigation />
+            <div className="flex items-center justify-center min-h-[80vh] px-4">
+              <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
+                <div className="text-center mb-6">
+                  <div className="text-6xl mb-4">🖐️</div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">Fingerprint Scanner</h2>
+                  <p className="text-gray-600">Upload a fingerprint image for analysis</p>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                    <label className="cursor-pointer">
+                      <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                      <div className="text-gray-600">
+                        <div className="text-3xl mb-2">📁</div>
+                        <span className="font-medium">Click to choose file</span>
+                        <p className="text-sm text-gray-500 mt-1">PNG, JPG, or JPEG</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {file && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">📄 {file.name}</p>
+                      <p className="text-xs text-blue-600">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="registerMode"
+                      checked={registerMode}
+                      onChange={(e) => setRegisterMode(e.target.checked)}
+                      className="rounded"
+                    />
+                    <label htmlFor="registerMode" className="text-sm text-gray-700">
+                      Register new fingerprint
+                    </label>
+                  </div>
+
+                  {registerMode && (
+                    <input
+                      type="text"
+                      placeholder="Enter username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
+
+                  <div className="flex space-x-3">
+                    {registerMode ? (
+                      <button 
+                        onClick={registerFingerprint}
+                        disabled={scanLoading || !file || !username.trim()}
+                        className="flex-1 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                      >
+                        {scanLoading ? '⏳ Registering...' : '📝 Register'}
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={startScan}
+                        disabled={scanLoading || !file}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                      >
+                        {scanLoading ? '⏳ Scanning...' : '🔍 Scan'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
       );
     }
 
     if (scanState === 'scanning') {
       return (
-        <div className="min-h-screen bg-white">
-          <Navigation />
-          
-          {/* Scanning content */}
-          <div className="flex items-center justify-center" style={{height: 'calc(100vh - 80px)'}}>
-            <div className="text-center">
-              <div className="text-8xl mb-6 animate-pulse">🔍</div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                Scanning...
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Analyzing fingerprint patterns
-              </p>
-              <div className="flex justify-center">
-                <div className="w-64 bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{width: '70%'}}></div>
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+            <Navigation />
+            <div className="flex items-center justify-center h-[80vh]">
+              <div className="text-center bg-white p-12 rounded-2xl shadow-xl">
+                <div className="text-8xl mb-6 animate-pulse">🔍</div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Analyzing Fingerprint...</h2>
+                <p className="text-gray-600 mb-6">Please wait while we process your scan</p>
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
       );
     }
 
     return (
-      <div className="min-h-screen bg-white">
-        <Navigation />
-        <main className="max-w-6xl mx-auto px-6 py-8">
-          <div className="mb-8 flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                🔍 Fingerprint Matches
-              </h1>
-              <p className="text-gray-600">
-                {matches.length} matches found
-              </p>
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+          <Navigation />
+          <main className="max-w-4xl mx-auto px-6 py-8">
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">✅</div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">Match Results</h1>
+              <p className="text-gray-600">Fingerprint analysis complete</p>
             </div>
-            <button
-              onClick={finishScan}
-              className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              ✅ New Scan
-            </button>
+            
+            {matches.map((m, i) => (
+                <div key={i} className="bg-white rounded-2xl p-8 mb-6 shadow-xl border border-gray-100">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Matched User:</span>
+                        <span className="font-bold text-lg text-blue-600">{m.username}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Match Score:</span>
+                        <span className="font-bold text-lg text-green-600">{m.score}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Certainty Level:</span>
+                        <span className="font-bold text-lg text-purple-600">{m.certainty}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Processing Time:</span>
+                        <span className="font-mono text-gray-800">{m.matchingTime}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-center">
+                      <div className="text-center">
+                        <div className={`text-6xl mb-2 ${m.score > 80 ? 'text-green-500' : m.score > 60 ? 'text-yellow-500' : 'text-red-500'}`}>
+                          {m.score > 80 ? '✅' : m.score > 60 ? '⚠️' : '❌'}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {m.score > 80 ? 'Strong Match' : m.score > 60 ? 'Partial Match' : 'No Match'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            ))}
+            
+            <div className="text-center">
+              <button 
+                onClick={() => {setScanState('ready'); setMatches([]); setFile(null);}}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-medium transition-colors"
+              >
+                🔍 Scan Another
+              </button>
+            </div>
+          </main>
+        </div>
+    );
+  };
+
+  const DatabasePage = () => {
+    const [folderPath, setFolderPath] = useState('');
+    const [username, setUsername] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState(null);
+
+    const handleRegisterFolder = async () => {
+      if (!folderPath.trim() || !username.trim()) {
+        setError("Please enter both folder path and username");
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const result = await registerFolder(folderPath.trim(), username.trim());
+        setResult(`Successfully registered folder for user: ${username}`);
+        setFolderPath('');
+        setUsername('');
+      } catch (err) {
+        console.error('Register folder error:', err);
+        setError(`Registration failed: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+        <Navigation />
+        <main className="max-w-4xl mx-auto px-6 py-8">
+          <div className="text-center mb-12">
+            <div className="text-6xl mb-4">🗃️</div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Database Management</h1>
+            <p className="text-gray-600">Register folder paths for forensic database indexing</p>
           </div>
 
-          {/* Results */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {matches.map((match) => (
-              <div key={match.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
-                <div className="mb-4">
-                  <img
-                    src={match.image}
-                    alt={`Fingerprint ${match.id}`}
-                    className="w-full h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => setExpandedImage(match)}
-                  />
-                </div>
-                
-                <h3 className="font-bold text-gray-800 text-center">
-                  {match.personName}
-                </h3>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Register Folder</h2>
+            
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                {error}
               </div>
-            ))}
-          </div>
-          {/* Expanded Image Modal */}
-        {expandedImage && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-            onClick={() => setExpandedImage(null)}
-          >
-            <div className="bg-white rounded-lg p-6 max-w-2xl max-h-full overflow-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800">
-                  {expandedImage.personName}
-                </h3>
-                <button
-                  onClick={() => setExpandedImage(null)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ✕
-                </button>
+            )}
+            
+            {result && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+                {result}
               </div>
-              <img
-                src={expandedImage.image}
-                alt={`Expanded fingerprint ${expandedImage.id}`}
-                className="w-full h-auto rounded-lg border border-gray-200"
-              />
+            )}
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Folder Path
+                </label>
+                <input
+                  type="text"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="/path/to/evidence/folder"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="forensic_analyst_01"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <button
+                onClick={handleRegisterFolder}
+                disabled={loading || !folderPath.trim() || !username.trim()}
+                className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+              >
+                {loading ? '⏳ Registering...' : '📁 Register Folder'}
+              </button>
             </div>
           </div>
-        )}
         </main>
       </div>
     );
   };
 
-  // Main routing logic
-  if (currentPage === 'home') {
-    return <HomePage />;
-  }
-
-  if (currentPage === 'dashboard') {
-    return <DashboardPage />;
-  }
-
-  if (currentPage === 'database') {
-    return <DatabasePage />;
-  }
-
-  if (currentPage === 'fingerprint') {
-    return <FingerprintPage />;
-  }
-
-  if (currentPage === 'game') {
-    return <GamePage />;
-  }
-
-  // Default fallback
+  if (currentPage === 'home') return <HomePage />;
+  if (currentPage === 'dashboard') return <DashboardPage />;
+  if (currentPage === 'database') return <DatabasePage />;
+  if (currentPage === 'fingerprint') return <FingerprintPage />;
+  if (currentPage === 'game') return <GamePage />;
   return <HomePage />;
 }
 
